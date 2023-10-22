@@ -1,0 +1,1 @@
+# useful variables for Terraform's configuration files

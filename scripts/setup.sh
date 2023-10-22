@@ -1,0 +1,1 @@
+# Script to setup main variables

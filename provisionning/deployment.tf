@@ -1,0 +1,1 @@
+# Terraform's configuration for provisionning 3 WMs
