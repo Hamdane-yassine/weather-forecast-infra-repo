@@ -7,7 +7,7 @@
 export GCP_userID="hamdaneyassine10"
 
 # Private key to use to connect to GCP
-export GCP_privateKeyFile="~/.ssh/google_compute_engine"
+export GCP_privateKeyFile="$HOME/.ssh/google_compute_engine"
 
 # Name of your GCP project
 export TF_VAR_project="stdt-project"
@@ -35,6 +35,8 @@ export TF_VAR_instanceName="tf-instance"
 
 # Prefix of your GCP deployment key
 export TF_VAR_deployKeyName="../sdtd-sa.json"
+
+ssh-keygen -t rsa -P "" -f "$GCP_privateKeyFile" -C "$GCP_userID" -b 2048
 
 cd ../provisionning
 

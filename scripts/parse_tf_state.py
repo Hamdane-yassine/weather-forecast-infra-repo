@@ -1,1 +1,0 @@
-# Python script for identifying the VMs in order to configure Ansible
