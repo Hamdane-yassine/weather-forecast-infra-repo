@@ -7,7 +7,7 @@
 export GCP_userID="hamdaneyassine10"
 
 # Private key to use to connect to GCP
-export GCP_privateKeyFile="$HOME/.ssh/google_compute_engine"
+export GCP_privateKeyFile="~/.ssh/google_compute_engine"
 
 # Name of your GCP project
 export TF_VAR_project="stdt-project"
@@ -21,8 +21,11 @@ export TF_VAR_zone="europe-west9-a"
 
 ### Other variables used by Terrform
 
-# Number of VMs created
-export TF_VAR_machineCount=3
+# Number of Workers created
+export TF_VAR_workersVMSCount=2
+
+# Number of Masters created
+export TF_VAR_mastersVMSCount=1
 
 # VM type
 export TF_VAR_machineType="e2-standard-2"
@@ -31,4 +34,19 @@ export TF_VAR_machineType="e2-standard-2"
 export TF_VAR_instanceName="tf-instance"
 
 # Prefix of your GCP deployment key
-export TF_VAR_deployKeyName="sdtd-sa.json"
+export TF_VAR_deployKeyName="../sdtd-sa.json"
+
+cd ../provisionning
+
+terraform init 
+
+terraform apply -auto-approve
+
+cd ../scripts
+
+source create-hosts.sh
+
+sleep 20
+
+# just to check if everything is good
+ansible all -i hosts -m ping
