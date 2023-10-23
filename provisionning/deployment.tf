@@ -1,11 +1,3 @@
-
-variable "gce_ssh_user" {
-  default = "hamdaneyassine10"
-}
-variable "gce_ssh_pub_key_file" {
-default = "~/.ssh/google_compute_engine.pub"
-}
-
 provider "google" {
   credentials = file(var.deployKeyName)
   project     = var.project
