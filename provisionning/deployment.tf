@@ -1,3 +1,13 @@
+variable "GcpUserID" {}
+variable "GcpPublicKeyFile" {}
+variable "project" {}
+variable "region" {}
+variable "zone" {}
+variable "deployKeyName" {}
+variable "workersVMSCount" {}
+variable "mastersVMSCount" {}
+variable "machineType" {}
+
 provider "google" {
   credentials = file(var.deployKeyName)
   project     = var.project
@@ -129,6 +139,6 @@ resource "google_compute_instance" "worker" {
 
 resource "google_compute_project_metadata" "default" {
   metadata = {
-    ssh-keys = "${var.gce_ssh_user}:${file(var.gce_ssh_pub_key_file)}"
+    ssh-keys = "${var.GcpUserID}:${file(var.GcpPublicKeyFile)}"
   }
 }
