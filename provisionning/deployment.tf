@@ -145,7 +145,7 @@ resource "google_compute_project_metadata" "default" {
 
 # [START storage_kms_encryption_tfstate]
 resource "google_kms_key_ring" "terraform_state" {
-  name     = "${random_id.bucket_prefix.hex}-bucket-tfstate"
+  name     = "bucket-tfstate"
   location = "europe-west9"
 }
 
@@ -165,12 +165,8 @@ resource "google_project_iam_member" "default" {
   member  = "serviceAccount:service-1069236696272@gs-project-accounts.iam.gserviceaccount.com"
 }
 
-resource "random_id" "bucket_prefix" {
-  byte_length = 8
-}
-
 resource "google_storage_bucket" "default" {
-  name          = "${random_id.bucket_prefix.hex}-bucket-tfstate"
+  name          = "bucket-tfstate"
   force_destroy = true
   location      = "EUROPE-WEST9"
   storage_class = "STANDARD"
@@ -183,8 +179,4 @@ resource "google_storage_bucket" "default" {
   depends_on = [
     google_project_iam_member.default
   ]
-}
-
-output "bucketName" {
-  value = google_storage_bucket.default.name
 }
