@@ -14,38 +14,13 @@ ssh-keygen -t rsa -P "" -f "$TF_VAR_gcpPrivateKeyFile" -C "$TF_VAR_gcpUserID" -b
 # Change directory to the provisioning folder
 cd ../provisionning
 
-if gcloud storage ls | grep -q "bucket-tfstate"; then
-cat <<EOF > backend.tf
-terraform {
-  backend "gcs" {
-    bucket  = "bucket-tfstate"
-    prefix  = "terraform/state"
-  }
-}
-EOF
-terraform init -force-copy
-terraform apply -auto-approve
-else
-
 # Initialize Terraform
-terraform init 
+terraform init
 
 # Apply Terraform configuration with auto-approval
 # Run the Terraform apply command and capture the output
 terraform apply -auto-approve
 
-# Create the backend.tf file with the extracted bucketName
-cat <<EOF > backend.tf
-terraform {
-  backend "gcs" {
-    bucket  = "bucket-tfstate"
-    prefix  = "terraform/state"
-  }
-}
-EOF
-
-terraform init -force-copy
-fi
 # Move back to the scripts folder
 cd ../scripts
 
