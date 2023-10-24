@@ -2,14 +2,17 @@
 
 ## Main variables
 
+# Specify the name of the bucket
+export TF_VAR_bucketName="terraform-state-bucket"
+
 # Set the User ID on Google Cloud Platform
-export TF_VAR_GcpUserID="root"
+export TF_VAR_gcpUserID="root"
 
 # Specify the private key to use for connecting to Google Cloud Platform
-export TF_VAR_GcpPrivateKeyFile="$HOME/.ssh/google_compute_engine"
+export TF_VAR_gcpPrivateKeyFile="$HOME/.ssh/google_compute_engine"
 
 # Specify the public key to use for connecting to Google Cloud Platform
-export TF_VAR_GcpPublicKeyFile="$HOME/.ssh/google_compute_engine.pub"
+export TF_VAR_gcpPublicKeyFile="$HOME/.ssh/google_compute_engine.pub"
 
 # Define the name of your Google Cloud Platform project
 export TF_VAR_project="stdt-project"
