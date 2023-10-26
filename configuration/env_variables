@@ -1,0 +1,20 @@
+#master node advertise ip address and cidr range for the pods.
+ad_addr: 34.155.119.129
+cidr_v: 10.244.0.0/16
+
+#these are mandatory to configure kubernetes cluster
+packages:
+- docker
+- kubeadm
+- kubectl
+
+services:
+- docker
+- kubelet
+- firewalld
+
+ports:
+- "6443/tcp"
+- "10250/tcp"
+
+token_file: join_token
