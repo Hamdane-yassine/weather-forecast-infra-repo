@@ -6,7 +6,7 @@
 export TF_VAR_bucketName="terraform-state-bucket"
 
 # Set the User ID on Google Cloud Platform
-export TF_VAR_gcpUserID="hamdaneyassine10"
+export TF_VAR_gcpUserID="root"
 
 # Specify the private key to use for connecting to Google Cloud Platform
 export TF_VAR_gcpPrivateKeyFile="$HOME/.ssh/google_compute_engine"

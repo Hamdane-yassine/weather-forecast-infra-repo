@@ -98,6 +98,12 @@ resource "google_compute_instance" "master" {
     scopes = ["compute-rw","storage-ro","service-management","service-control","logging-write","monitoring"]
   }
   
+  metadata_startup_script = <<-EOT
+  #!/bin/bash
+  sudo sed -i 's/^\(PermitRootLogin\s*\).*$/\1yes/' /etc/ssh/sshd_config
+  sudo systemctl restart sshd
+EOT
+
 }
 
 resource "google_compute_instance" "worker" {
@@ -132,6 +138,13 @@ resource "google_compute_instance" "worker" {
   metadata = {
     pod-cidr = "10.200.${count.index}.0/24"
   }
+
+  metadata_startup_script = <<-EOT
+  #!/bin/bash
+  sudo sed -i 's/^\(PermitRootLogin\s*\).*$/\1yes/' /etc/ssh/sshd_config
+  sudo systemctl restart sshd
+EOT
+
 
 }
 
