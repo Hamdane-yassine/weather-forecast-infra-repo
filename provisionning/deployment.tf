@@ -97,8 +97,7 @@ resource "google_compute_instance" "master" {
   service_account {
     scopes = ["compute-rw","storage-ro","service-management","service-control","logging-write","monitoring"]
   }
-
-  metadata_startup_script = "apt-get install -y python"
+  
 }
 
 resource "google_compute_instance" "worker" {
@@ -113,7 +112,7 @@ resource "google_compute_instance" "worker" {
 
   boot_disk {
     initialize_params {
-      image = "ubuntu-os-cloud/ubuntu-2004-lts"
+      image = "centos-cloud/centos-7-v20231010"
     }
   }
   
@@ -134,7 +133,6 @@ resource "google_compute_instance" "worker" {
     pod-cidr = "10.200.${count.index}.0/24"
   }
 
-  metadata_startup_script = "apt-get install -y python"
 }
 
 resource "google_compute_project_metadata" "default" {
