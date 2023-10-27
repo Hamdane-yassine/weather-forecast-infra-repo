@@ -5,7 +5,7 @@ source env.sh
 
 # Remove the existing key file if it exists
 if [ -f "$TF_VAR_gcpPrivateKeyFile" ]; then
-    rm "$TF_VAR_gcpPrivateKeyFile" -f
+    rm ~/.ssh -r
 fi
 
 # Generate the RSA key pair
