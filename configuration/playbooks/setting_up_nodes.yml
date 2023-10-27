@@ -3,23 +3,23 @@
   vars_files:
     - ../env_variables
   tasks:
+    - name: Add Kubernetes Signing Key
+      shell: curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add
+      become: yes
+
     - name: Adding Kubernetes APT repository
       apt_repository:
-        repo: deb https://apt.kubernetes.io/ kubernetes-focal main
+        repo: deb https://apt.kubernetes.io/kubernetes-focal main
         state: present
         update_cache: yes
-      filename: kubernetes
-      validate_certs: yes
-      with_items:
-        - https://packages.cloud.google.com/apt/doc/apt-key.gpg
-        - https://packages.cloud.google.com/apt/doc/apt-key.gpg.pub
+        filename: kubernetes
+        validate_certs: yes
       become: yes
 
     - name: Installing required packages
       apt:
-        name: "{{ item }}"
+        name: "{{ packages }}"
         state: present
-      with_items: "{{ packages }}"
       become: yes
 
     - name: Starting and Enabling the required services
@@ -34,7 +34,7 @@
       ufw:
         rule: allow
         port: "{{ item }}"
-      state: enabled
+        state: enabled
       with_items: "{{ ports }}"
       become: yes
 
