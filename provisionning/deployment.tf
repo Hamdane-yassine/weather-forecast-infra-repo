@@ -81,7 +81,7 @@ resource "google_compute_instance" "master" {
 
   boot_disk {
     initialize_params {
-      image = "ubuntu-os-cloud/ubuntu-2004-lts"
+      image = "centos-cloud/centos-7-v20231010"
     }
   }
 

@@ -11,7 +11,7 @@ packages:
 services:
 - docker
 - kubelet
-- ufw
+- firewalld
 
 ports:
 - "6443/tcp"
