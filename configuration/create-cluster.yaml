@@ -1,0 +1,52 @@
+---
+# This playbook initializes a Kubernetes cluster on the master nodes and joins the worker nodes to the cluster.
+- hosts: masters
+  tasks:
+    # Initialize the Kubernetes cluster with a specified pod network CIDR.
+    - name: Execute kubeadm init command to initialize the cluster
+      shell: "kubeadm init --pod-network-cidr=192.168.0.0/16"
+
+    # Set up the KUBECONFIG environment variable to allow kubectl to communicate with the cluster.
+    - name: Set KUBECONFIG environment variable
+      become: true
+      shell: |
+        mkdir -p $HOME/.kube
+        sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+        sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+    # Apply Calico networking to the cluster.
+    - name: Apply Calico networking
+      shell: kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.26.3/manifests/calico.yaml
+    
+    # Get the Kubernetes cluster token.
+    - name: "Cluster token"
+      shell: kubeadm token list | cut -d ' ' -f1 | sed -n '2p'
+      register: K8S_TOKEN
+
+    # Get the Kubernetes cluster certificate authority hash.
+    - name: "CA Hash"
+      shell: openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/^.* //'
+      register: K8S_MASTER_CA_HASH
+
+    # Get the Kubernetes control plane host and port.
+    - name: "Control plan host and port"
+      shell: > 
+        grep -o 'server: .*' /etc/kubernetes/admin.conf | awk '{sub("https://", "", $2); print $2}'
+      register: K8S_MASTER_NODE_IP_AND_PORT
+
+    # Add the Kubernetes token, certificate authority hash, and control plane host and port to a dummy host for later use.
+    - name: "Add K8S Token and Hash to dummy host"
+      add_host:
+        name:   "K8S_TOKEN_HOLDER"
+        token:  "{{ K8S_TOKEN.stdout }}"
+        hash:   "{{ K8S_MASTER_CA_HASH.stdout }}"
+        ip-port: "{{ K8S_MASTER_NODE_IP_AND_PORT.stdout }}"
+
+- hosts: workers
+  tasks:
+    # Join the worker nodes to the Kubernetes cluster using the token, certificate authority hash, and control plane host and port.
+    - name: join k8s cluster
+      shell: >
+        kubeadm join --token={{ hostvars['K8S_TOKEN_HOLDER']['token'] }}
+        --discovery-token-ca-cert-hash sha256:{{ hostvars['K8S_TOKEN_HOLDER']['hash'] }}
+        {{ hostvars['K8S_TOKEN_HOLDER']['ip-port'] }}

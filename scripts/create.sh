@@ -30,5 +30,14 @@ source create-hosts.sh
 # Pause for 20 seconds to allow for setup completion
 sleep 20
 
-# Check if all connections are successful
-ansible all -i hosts -m ping
+cd ../configuration
+
+ansible-playbook conf-k8s-modules.yaml
+
+ansible-playbook install-config-containerd.yaml
+
+ansible-playbook install-k8s-tools.yaml
+
+ansible-playbook create-cluster.yaml
+
+cd ../scripts

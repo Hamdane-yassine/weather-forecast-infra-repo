@@ -40,6 +40,7 @@ resource "google_compute_firewall" "internal" {
 
   allow {
     protocol = "tcp"
+    ports    = ["22","6443", "2379-2380","10250","10259","10257","30000-32767"]
   }
 
   source_ranges = [ "10.240.0.0/24","10.200.0.0/16" ]
@@ -81,7 +82,7 @@ resource "google_compute_instance" "master" {
 
   boot_disk {
     initialize_params {
-      image = "centos-cloud/centos-7-v20231010"
+      image = "ubuntu-os-cloud/ubuntu-2004-lts"
     }
   }
 
@@ -98,11 +99,11 @@ resource "google_compute_instance" "master" {
     scopes = ["compute-rw","storage-ro","service-management","service-control","logging-write","monitoring"]
   }
   
-  metadata_startup_script = <<-EOT
-  #!/bin/bash
-  sudo sed -i 's/^\(PermitRootLogin\s*\).*$/\1yes/' /etc/ssh/sshd_config
-  sudo systemctl restart sshd
-EOT
+#   metadata_startup_script = <<-EOT
+#   #!/bin/bash
+#   sudo sed -i 's/^\(PermitRootLogin\s*\).*$/\1yes/' /etc/ssh/sshd_config
+#   sudo systemctl restart sshd
+# EOT
 
 }
 
@@ -118,7 +119,7 @@ resource "google_compute_instance" "worker" {
 
   boot_disk {
     initialize_params {
-      image = "centos-cloud/centos-7-v20231010"
+      image = "ubuntu-os-cloud/ubuntu-2004-lts"
     }
   }
   
@@ -139,11 +140,11 @@ resource "google_compute_instance" "worker" {
     pod-cidr = "10.200.${count.index}.0/24"
   }
 
-  metadata_startup_script = <<-EOT
-  #!/bin/bash
-  sudo sed -i 's/^\(PermitRootLogin\s*\).*$/\1yes/' /etc/ssh/sshd_config
-  sudo systemctl restart sshd
-EOT
+#   metadata_startup_script = <<-EOT
+#   #!/bin/bash
+#   sudo sed -i 's/^\(PermitRootLogin\s*\).*$/\1yes/' /etc/ssh/sshd_config
+#   sudo systemctl restart sshd
+# EOT
 
 
 }
