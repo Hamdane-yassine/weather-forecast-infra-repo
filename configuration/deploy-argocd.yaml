@@ -1,0 +1,76 @@
+---
+# Playbook for deploying Argo CD on the first master node and using it to deploy applications.
+- hosts: masters[0]
+  tasks:
+    # Check if the Argo CD namespace already exists to avoid creating a duplicate.
+    - name: Check if Argo CD namespace exists
+      shell: kubectl get ns argocd
+      register: ns_check
+      failed_when: false
+      changed_when: false
+
+    # Create the Argo CD namespace if it does not exist.
+    - name: Create Argo CD namespace
+      shell: kubectl create namespace argocd
+      when: ns_check.rc != 0
+
+    # Deploy Argo CD using the official installation manifests.
+    - name: Deploy Argo CD
+      shell: kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+    # Patch the Argo CD service to use a NodePort for external access.
+    - name: Patch Argo CD service to NodePort
+      shell: 'kubectl patch svc argocd-server -n argocd -p "{\"spec\": {\"type\": \"NodePort\", \"ports\": [{\"port\": 80, \"nodePort\": 31000}]}}"'
+
+    # Ensure all Argo CD services are running before proceeding.
+    - name: Wait for all Argo CD services to be running
+      shell: kubectl get pods -n argocd --field-selector=status.phase!=Running
+      register: argocd_service_check
+      until: argocd_service_check.stdout == ""
+      retries: 10
+      delay: 10
+
+    # Retrieve the initial admin password for Argo CD from its Kubernetes secret.
+    - name: Get Argo CD initial admin password
+      shell: kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath="{.data.password}" | base64 --decode && echo
+      register: ARGOCD_PASSWORD
+      failed_when: ARGOCD_PASSWORD.rc != 0
+      
+    # Store the retrieved Argo CD password in a local file for later use.
+    - name: Store Argo CD password in local file
+      delegate_to: localhost
+      copy:
+        content: "{{ ARGOCD_PASSWORD.stdout }}"
+        dest: ./argocd-pwd
+
+    # Check if the Argo CD initial admin secret exists before attempting deletion.
+    - name: Check if Argo CD initial admin secret exists
+      shell: kubectl get secret argocd-initial-admin-secret -n argocd
+      register: secret_check
+      failed_when: false
+      changed_when: false
+
+    # Delete the initial admin secret for security reasons, if it exists.
+    - name: Delete Argo CD initial admin secret
+      shell: kubectl delete secret argocd-initial-admin-secret -n argocd
+      when: secret_check.rc == 0
+
+    # Copy the Argo CD secret access file to the master node for configuring access controls.
+    - name: Copy argocd-secret-access.yaml to master node
+      copy:
+        src: ./argocd-secret-access.yaml
+        dest: /tmp/argocd-secret-access.yaml
+
+    # Copy the Argo CD CRD (Custom Resource Definition) file to the master node for application setup.
+    - name: Copy argocd-crd.yaml to master node
+      copy:
+        src: ./argocd-crd.yaml
+        dest: /tmp/argocd-crd.yaml
+
+    # Apply the secret access configuration to Argo CD.
+    - name: Apply Argo CD secret access
+      shell: kubectl apply -f /tmp/argocd-secret-access.yaml
+
+    # Apply the custom resource definitions needed for Argo CD to function.
+    - name: Apply Argo CD CRD
+      shell: kubectl apply -f /tmp/argocd-crd.yaml

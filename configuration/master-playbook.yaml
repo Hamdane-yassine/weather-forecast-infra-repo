@@ -1,0 +1,47 @@
+---
+# This playbook sets up a Kubernetes cluster on master nodes.
+# It initializes the cluster, configures network settings, and saves join information for worker nodes.
+- hosts: masters
+  tasks:
+    # Initializes the Kubernetes cluster with a specified pod network CIDR using kubeadm.
+    - name: Execute kubeadm init command to initialize the cluster
+      shell: "kubeadm init --pod-network-cidr=10.244.0.0/16"
+
+    # Sets up the KUBECONFIG environment variable to enable kubectl to communicate with the cluster.
+    - name: Set KUBECONFIG environment variable
+      become: true
+      shell: |
+        mkdir -p $HOME/.kube
+        sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+        sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+    # Applies network configuration to the cluster using flannel.
+    - name: Apply Calico networking
+      shell: kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+    
+    # Retrieves the token necessary for worker nodes to join the Kubernetes cluster.
+    - name: "Cluster token"
+      shell: kubeadm token list | cut -d ' ' -f1 | sed -n '2p'
+      register: K8S_TOKEN
+
+    # Obtains the certificate authority hash for the Kubernetes cluster.
+    - name: "CA Hash"
+      shell: openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/^.* //'
+      register: K8S_MASTER_CA_HASH
+
+    # Gathers the Kubernetes control plane host and port information.
+    - name: "Control plan host and port"
+      shell: > 
+        grep -o 'server: .*' /etc/kubernetes/admin.conf | awk '{sub("https://", "", $2); print $2}'
+      register: K8S_MASTER_NODE_IP_AND_PORT
+
+    # Writes the Kubernetes join information (token, CA hash, control plane IP/port) to a local file.
+    # This file is used by worker nodes to join the Kubernetes cluster.
+    - name: Write K8S join information to a file
+      delegate_to: localhost
+      copy:
+        content: |
+          token: "{{ K8S_TOKEN.stdout }}"
+          hash: "{{ K8S_MASTER_CA_HASH.stdout }}"
+          ip_port: "{{ K8S_MASTER_NODE_IP_AND_PORT.stdout }}"
+        dest: ./k8s_join_info.yml

@@ -38,6 +38,10 @@ ansible-playbook install-config-containerd.yaml
 
 ansible-playbook install-k8s-tools.yaml
 
-ansible-playbook create-cluster.yaml
+ansible-playbook master-playbook.yaml
+
+ansible-playbook worker-playbook.yaml
+
+ansible-playbook deploy-argocd.yaml
 
 cd ../scripts
