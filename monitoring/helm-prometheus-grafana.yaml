@@ -1,0 +1,23 @@
+---
+- name: Setup Prometheus stack on GCP Kubernetes cluster
+  hosts: masters
+  tasks:
+    - name: Download Helm script
+      get_url:
+        url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+        dest: /tmp/get-helm-3
+        mode: '0755'
+
+    - name: Run Helm script
+      command: /tmp/get-helm-3
+
+    - name: Add Prometheus Helm chart repository
+      command: helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+
+    - name: Update Helm chart repositories
+      command: helm repo update
+
+    - name: Install Prometheus stack using Helm
+      command: helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack --namespace monitoring
+
+# Run using: ansible-playbook -i scripts/hosts monitoring/helm-prometheus-grafana.yaml
