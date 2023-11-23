@@ -27,7 +27,7 @@ export TF_VAR_zone="europe-west9-a"
 ### Other variables used by Terraform
 
 # Define the number of workers to be created
-export TF_VAR_workersVMSCount=2
+export TF_VAR_workersVMSCount=3
 
 # Define the number of masters to be created
 export TF_VAR_mastersVMSCount=2

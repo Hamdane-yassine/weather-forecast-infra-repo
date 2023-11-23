@@ -36,6 +36,8 @@ source fetch-lb-ip.sh
 
 cd ../configuration
 
+mkdir etcd 2> /dev/null
+
 ansible-playbook configure-lb.yaml
 
 ansible-playbook conf-k8s-modules.yaml
@@ -50,4 +52,10 @@ ansible-playbook worker-playbook.yaml
 
 ansible-playbook deploy-argocd.yaml
 
+ansible-playbook helm-prometheus-grafana.yaml
+
+rm -rd etcd
+rm ca.*
+rm front-proxy*
+rm sa*
 cd ../scripts

@@ -50,7 +50,7 @@ frontend kubernetes
         default_backend master-nodes
 
 frontend Argo_front
-        bind 0.0.0.0:8081
+        bind 0.0.0.0:8083
         mode http
         default_backend argo_back
 

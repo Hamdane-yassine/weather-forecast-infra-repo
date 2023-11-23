@@ -31,7 +31,7 @@ resource "google_compute_instance" "load-balancer-1" {
     subnetwork = google_compute_subnetwork.default.name
     network_ip = "192.168.7.12"
     access_config {
-      nat_ip = google_compute_address.load_balancer_address_1.address
+      nat_ip = "34.163.97.231"
     }
   }
 
@@ -62,7 +62,7 @@ resource "google_compute_firewall" "internal" {
 
   allow {
     protocol = "tcp"
-    ports    = ["22", "6443", "2379-2380", "10250", "10259", "10257", "30000-32767","8081","8082"]
+    ports    = ["22", "6443", "2379-2380", "10250", "10259", "10257", "30000-32767","8083","8082"]
   }
 
   source_ranges = ["0.0.0.0/0"]
@@ -82,7 +82,7 @@ resource "google_compute_firewall" "external" {
 
   allow {
     protocol = "tcp"
-    ports    = ["22", "6443", "443", "80", "30000-32767","8081","8082"]
+    ports    = ["22", "6443", "443", "80", "30000-32767","8083","8082"]
   }
 
   source_ranges = ["0.0.0.0/0"]
