@@ -2,6 +2,9 @@
 - name: Setup Prometheus stack on GCP Kubernetes cluster
   hosts: masters
   tasks:
+    - name: Create monitoring namespace
+      shell: kubectl create namespace monitoring
+
     - name: Download Helm script
       get_url:
         url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
@@ -9,15 +12,30 @@
         mode: '0755'
 
     - name: Run Helm script
-      command: /tmp/get-helm-3
+      shell: /tmp/get-helm-3
 
     - name: Add Prometheus Helm chart repository
-      command: helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+      shell: helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 
     - name: Update Helm chart repositories
-      command: helm repo update
+      shell: helm repo update
 
     - name: Install Prometheus stack using Helm
-      command: helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack --namespace monitoring
+      shell: helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack --namespace monitoring
+
+    - name: wait for All pods to be running
+      shell: kubectl get pods -n monitoring --field-selector=status.phase!=Running
+      register: prometheus_service_check
+      until: prometheus_service_check.stdout == ""
+      retries: 10
+      delay: 10
+
+    - name: Copy grafana-export-service.yaml to master node
+      copy:
+        src: ./grafana-export-service.yaml
+        dest: /tmp/grafana-export-service.yaml
+
+    - name: Create Grafana service
+      shell: kubectl apply -f /tmp/grafana-export-service.yaml
 
 # Run using: ansible-playbook -i scripts/hosts monitoring/helm-prometheus-grafana.yaml

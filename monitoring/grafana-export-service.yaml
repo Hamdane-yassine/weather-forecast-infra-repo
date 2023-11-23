@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: grafana-service
+  name: port-export-grafana
   namespace: monitoring
 spec:
   type: NodePort
@@ -9,8 +9,8 @@ spec:
   - port: 3000
     targetPort: 3000
     nodePort: 30001
+    name: http
   selector:
-    app: grafana
-
+    app: kube-prometheus-stack-grafana
 
 # Run using: kubectl apply -f monitoring/grafana-export-service.yaml
