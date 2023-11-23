@@ -1,0 +1,27 @@
+---
+# This playbook configures HAProxy on the load balancer nodes.
+- hosts: lb
+  become: true
+  tasks:
+    # Install HAProxy on the load balancer nodes.
+    - name: Install HAProxy
+      apt:
+        name: haproxy
+        state: latest
+        update_cache: yes
+
+    # Copy the HAProxy configuration file from the local machine to the load balancer nodes.
+    - name: Copy HAProxy configuration file
+      copy:
+        src: ./haproxy.cfg
+        dest: /etc/haproxy/haproxy.cfg
+        owner: root
+        group: root
+        mode: '0644'
+
+    # Restart the HAProxy service to apply the new configuration.
+    - name: Restart HAProxy service
+      systemd:
+        name: haproxy
+        state: restarted
+        daemon_reload: yes

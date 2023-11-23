@@ -1,6 +1,6 @@
 ---
 # Playbook for deploying Argo CD on the first master node and using it to deploy applications.
-- hosts: masters[0]
+- hosts: first-master
   tasks:
     # Check if the Argo CD namespace already exists to avoid creating a duplicate.
     - name: Check if Argo CD namespace exists
