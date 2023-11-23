@@ -24,13 +24,19 @@ terraform apply -auto-approve
 # Move back to the scripts folder
 cd ../scripts
 
-# Source the create-hosts script
-source create-hosts.sh
 
 # Pause for 20 seconds to allow for setup completion
 sleep 20
 
+source create-hosts.sh
+
+source haproxy.sh
+
+source fetch-lb-ip.sh
+
 cd ../configuration
+
+ansible-playbook configure-lb.yaml
 
 ansible-playbook conf-k8s-modules.yaml
 

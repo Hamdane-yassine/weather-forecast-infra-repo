@@ -1,6 +1,6 @@
 ---
 # This playbook installs Kubernetes components on all hosts.
-- hosts: all
+- hosts: nodes
   become: yes
   
   tasks:

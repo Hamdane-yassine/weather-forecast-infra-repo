@@ -1,7 +1,7 @@
 ---
 # This playbook configures the required kernel modules and sysctl parameters for a Kubernetes cluster.
 - name: Configure k8s modules and sysctl params
-  hosts: all
+  hosts: nodes
   become: true
   
   tasks:

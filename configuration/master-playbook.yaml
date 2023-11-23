@@ -1,11 +1,23 @@
 ---
-# This playbook sets up a Kubernetes cluster on master nodes.
+# This playbook sets up a Kubernetes cluster on the first master node.
 # It initializes the cluster, configures network settings, and saves join information for worker nodes.
-- hosts: masters
+- hosts: firstMaster
   tasks:
-    # Initializes the Kubernetes cluster with a specified pod network CIDR using kubeadm.
+    # Read load balancer IP from the file
+    - name: Read load balancer IP from file
+      shell: cat lb-ip
+      register: lb_ip
+      delegate_to: localhost
+
+    # Initializes the Kubernetes cluster with a specified pod network CIDR and control plane endpoint using kubeadm.
     - name: Execute kubeadm init command to initialize the cluster
-      shell: "kubeadm init --pod-network-cidr=10.244.0.0/16"
+      shell: "kubeadm init --pod-network-cidr=10.244.0.0/16 --control-plane-endpoint '{{ lb_ip.stdout }}' --upload-certs"
+      register: kubeadm_init_output
+
+    # Extract certificate key from kubeadm init output
+    - name: Extract certificate key
+      set_fact:
+        certificate_key: "{{ kubeadm_init_output.stdout | regex_search('(certificate-key[\\s=]+)([a-z0-9]+)', '\\2') | first }}"
 
     # Sets up the KUBECONFIG environment variable to enable kubectl to communicate with the cluster.
     - name: Set KUBECONFIG environment variable
@@ -14,10 +26,6 @@
         mkdir -p $HOME/.kube
         sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
         sudo chown $(id -u):$(id -g) $HOME/.kube/config
-
-    # Applies network configuration to the cluster using flannel.
-    - name: Apply Calico networking
-      shell: kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
     
     # Retrieves the token necessary for worker nodes to join the Kubernetes cluster.
     - name: "Cluster token"
@@ -29,12 +37,6 @@
       shell: openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/^.* //'
       register: K8S_MASTER_CA_HASH
 
-    # Gathers the Kubernetes control plane host and port information.
-    - name: "Control plan host and port"
-      shell: > 
-        grep -o 'server: .*' /etc/kubernetes/admin.conf | awk '{sub("https://", "", $2); print $2}'
-      register: K8S_MASTER_NODE_IP_AND_PORT
-
     # Writes the Kubernetes join information (token, CA hash, control plane IP/port) to a local file.
     # This file is used by worker nodes to join the Kubernetes cluster.
     - name: Write K8S join information to a file
@@ -43,5 +45,43 @@
         content: |
           token: "{{ K8S_TOKEN.stdout }}"
           hash: "{{ K8S_MASTER_CA_HASH.stdout }}"
-          ip_port: "{{ K8S_MASTER_NODE_IP_AND_PORT.stdout }}"
+          ip_port: "{{ lb_ip.stdout }}"
+          certificate_key: "{{ certificate_key }}"
         dest: ./k8s_join_info.yml
+
+- hosts: otherMasters
+  tasks:
+    # Loads the Kubernetes join information from a file.
+    # This file contains the token, CA hash, and control plane IP/port required for joining the cluster.
+    - name: Load K8S join information
+      include_vars:
+        file: ./k8s_join_info.yml
+      delegate_to: localhost
+
+    # Joins the worker nodes to the Kubernetes cluster.
+    # Uses the token, CA hash, and control plane IP/port from the loaded join information.
+    - name: join k8s cluster
+      shell: >
+        kubeadm join --token={{ token }} --discovery-token-ca-cert-hash sha256:{{ hash }} --control-plane --certificate-key {{ certificate_key }} {{ ip_port }}
+
+    # Sets up the KUBECONFIG environment variable to enable kubectl to communicate with the cluster.
+    - name: Set KUBECONFIG environment variable
+      become: true
+      shell: |
+        mkdir -p $HOME/.kube
+        sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+        sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+- hosts: first-master
+  tasks:
+    # Read load balancer IP from the file
+    - name: Apply Calico networking
+      shell: kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+      
+    - name: Fetch the admin.conf file
+      fetch:
+        src: /etc/kubernetes/admin.conf
+        dest: "./"
+        flat: yes
+
+         

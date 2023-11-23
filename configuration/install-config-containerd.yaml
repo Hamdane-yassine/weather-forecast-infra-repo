@@ -1,7 +1,7 @@
 ---
 # This playbook installs and configures containerd along with the necessary dependencies for a Kubernetes cluster.
 - name: Download, install, and configure containerd
-  hosts: all
+  hosts: nodes
   become: true
   
   tasks:
