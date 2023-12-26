@@ -35,5 +35,6 @@ $other_masters
 
 [all:vars]
 ansible_ssh_user=$(printenv TF_VAR_gcpUserID)
-ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ForwardAgent=yes'
+ansible_ssh_private_key_file=/tmp/google_compute_engine
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
 EOF

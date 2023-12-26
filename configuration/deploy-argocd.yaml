@@ -20,7 +20,21 @@
 
     # Patch the Argo CD service to use a NodePort for external access.
     - name: Patch Argo CD service to NodePort
-      shell: 'kubectl patch svc argocd-server -n argocd -p "{\"spec\": {\"type\": \"NodePort\", \"ports\": [{\"port\": 80, \"nodePort\": 31000}]}}"'
+      shell: |
+        kubectl patch svc argocd-server -n argocd -p '{"spec": {"type": "NodePort"}}'
+
+    # Get the NodePort assigned to Argo CD
+    - name: Get the NodePort assigned to Argo CD
+      shell: kubectl get svc argocd-server -n argocd -o jsonpath='{.spec.ports[?(@.port==80)].nodePort}'
+      register: argocd_nodeport
+    
+    # Save Argo CD NodePort to a file
+    - name: Save Argo CD NodePort to a file
+      delegate_to: localhost
+      lineinfile:
+        path: ./nodeports
+        line: "{{ argocd_nodeport.stdout }}"
+        create: yes
 
     # Ensure all Argo CD services are running before proceeding.
     - name: Wait for all Argo CD services to be running
@@ -74,3 +88,23 @@
     # Apply the custom resource definitions needed for Argo CD to function.
     - name: Apply Argo CD CRD
       shell: kubectl apply -f /tmp/argocd-crd.yaml
+    
+    - name: Wait for nginx-service to be available
+      shell: kubectl get svc nginx-service -n sdtd-project
+      register: nginx_service_check
+      until: nginx_service_check.rc == 0
+      retries: 30
+      delay: 10
+
+    # Get the NodePort assigned to the application
+    - name: Get the NodePort assigned to application
+      shell: kubectl get svc nginx-service -n sdtd-project -o jsonpath='{.spec.ports[?(@.port==80)].nodePort}'
+      register: app_nodeport
+    
+    # Save Argo CD NodePort to a file
+    - name: Save App NodePort to a file
+      delegate_to: localhost
+      lineinfile:
+        path: ./nodeports
+        line: "{{ app_nodeport.stdout }}"
+        create: yes

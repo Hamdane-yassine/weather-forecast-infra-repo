@@ -1,5 +1,6 @@
 variable "gcpUserID" {}
 variable "gcpPublicKeyFile" {}
+variable "gcpPrivateKeyFile" {}
 variable "project" {}
 variable "region" {}
 variable "zone" {}
@@ -53,7 +54,7 @@ resource "google_compute_firewall" "external" {
 
   allow {
     protocol = "tcp"
-    ports    = ["22", "443", "80","8083","8082"]
+    ports    = ["22", "443", "80", "8083", "8082"]
   }
 
   source_ranges = ["0.0.0.0/0"]
@@ -65,10 +66,11 @@ resource "google_compute_address" "gateway-public-ip" {
 }
 
 resource "google_compute_instance" "gateway-server" {
-  name           = "gateway-server"
-  machine_type   = var.machineType
-  zone           = var.zone
-  tags           = ["gateway"]
+  name         = "gateway-server"
+  machine_type = var.machineType
+  zone         = var.zone
+  tags         = ["gateway"]
+
   boot_disk {
     initialize_params {
       image = var.osImage
@@ -82,14 +84,86 @@ resource "google_compute_instance" "gateway-server" {
       nat_ip = google_compute_address.gateway-public-ip.address
     }
   }
+
+  provisioner "local-exec" {
+    command = "cd ../scripts && ./create-hosts.sh && ./fetch-lb-ip.sh && ./haproxy.sh"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "mkdir -p /tmp/configuration/",
+      "mkdir -p /tmp/scripts/",
+      "sudo apt-get update",
+      "sudo apt-get install -y software-properties-common",
+      "sudo add-apt-repository --yes --update ppa:ansible/ansible",
+      "sudo apt-get install -y ansible",
+    ]
+
+    connection {
+      type        = "ssh"
+      user        = var.gcpUserID
+      private_key = file(var.gcpPrivateKeyFile)
+      host        = self.network_interface[0].access_config[0].nat_ip
+    }
+  }
+
+  provisioner "file" {
+    source      = var.gcpPrivateKeyFile
+    destination = "/tmp/google_compute_engine"
+
+    connection {
+      type        = "ssh"
+      user        = var.gcpUserID
+      private_key = file(var.gcpPrivateKeyFile)
+      host        = self.network_interface[0].access_config[0].nat_ip
+    }
+  }
+
+  provisioner "file" {
+    source      = "../scripts/"
+    destination = "/tmp/scripts/"
+
+    connection {
+      type        = "ssh"
+      user        = var.gcpUserID
+      private_key = file(var.gcpPrivateKeyFile)
+      host        = self.network_interface[0].access_config[0].nat_ip
+    }
+  }
+
+  provisioner "file" {
+    source      = "../configuration/"
+    destination = "/tmp/configuration/"
+
+    connection {
+      type        = "ssh"
+      user        = var.gcpUserID
+      private_key = file(var.gcpPrivateKeyFile)
+      host        = self.network_interface[0].access_config[0].nat_ip
+    }
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "chmod +x /tmp/scripts/configure.sh",
+      "/tmp/scripts/configure.sh"
+    ]
+
+    connection {
+      type        = "ssh"
+      user        = var.gcpUserID
+      private_key = file(var.gcpPrivateKeyFile)
+      host        = self.network_interface[0].access_config[0].nat_ip
+    }
+  }
 }
 
 resource "google_compute_instance" "master" {
-  count          = var.mastersVMSCount
-  name           = "master-${count.index}"
-  machine_type   = var.machineType
-  zone           = var.zone
-  tags           = ["master"]
+  count        = var.mastersVMSCount
+  name         = "master-${count.index}"
+  machine_type = var.machineType
+  zone         = var.zone
+  tags         = ["master"]
 
   boot_disk {
     initialize_params {
@@ -105,11 +179,11 @@ resource "google_compute_instance" "master" {
 
 resource "google_compute_instance" "worker" {
 
-  count          = var.workersVMSCount
-  name           = "worker-${count.index}"
-  machine_type   = var.machineType
-  zone           = var.zone
-  tags           = ["worker"]
+  count        = var.workersVMSCount
+  name         = "worker-${count.index}"
+  machine_type = var.machineType
+  zone         = var.zone
+  tags         = ["worker"]
 
   boot_disk {
     initialize_params {

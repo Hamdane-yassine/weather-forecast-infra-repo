@@ -30,7 +30,17 @@
       retries: 10
       delay: 10
 
-    - name: Patch grafana service to NodePort with port 31100
-      shell: 'kubectl patch svc kube-prometheus-stack-grafana -n monitoring -p "{\"spec\": {\"type\": \"NodePort\", \"ports\": [{\"port\": 80, \"nodePort\": 31100}]}}"'
+    - name: Patch Grafana service to NodePort
+      shell: |
+        kubectl patch svc kube-prometheus-stack-grafana -n monitoring -p '{"spec": {"type": "NodePort"}}'
 
-# Run using: ansible-playbook -i scripts/hosts monitoring/helm-prometheus-grafana.yaml
+    - name: Get the NodePort assigned to Grafana
+      shell: kubectl get svc kube-prometheus-stack-grafana -n monitoring -o jsonpath='{.spec.ports[?(@.port==80)].nodePort}'
+      register: grafana_nodeport
+
+    - name: Save Grafana NodePort to a file
+      delegate_to: localhost
+      lineinfile:
+        path: ./nodeports
+        line: "{{ grafana_nodeport.stdout }}"
+        create: yes
