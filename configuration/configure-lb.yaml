@@ -1,6 +1,6 @@
 ---
 # This playbook configures HAProxy on the load balancer nodes.
-- hosts: lb
+- hosts: gateway
   become: true
   tasks:
     # Install HAProxy on the load balancer nodes.

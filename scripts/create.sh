@@ -24,6 +24,21 @@ terraform apply -auto-approve
 # Move back to the scripts folder
 cd ../scripts
 
+BASTION_IP=$(source update-ssh-config.sh)
+
+if [ -z "$BASTION_IP" ]; then
+    echo "Failed to obtain Bastion IP."
+    exit 1
+fi
+
+# Check if SSH Agent is running and has keys
+if [ -z "$SSH_AUTH_SOCK" ] || ! ssh-add -l > /dev/null 2>&1; then
+    # Start SSH Agent if not running or no keys are loaded
+    eval $(ssh-agent -s)
+    ssh-add ~/.ssh/google_compute_engine
+else
+    echo "SSH Agent is already running and a key is loaded."
+fi
 
 # Pause for 20 seconds to allow for setup completion
 sleep 20

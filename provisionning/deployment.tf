@@ -7,34 +7,13 @@ variable "deployKeyName" {}
 variable "workersVMSCount" {}
 variable "mastersVMSCount" {}
 variable "machineType" {}
+variable "osImage" {}
 
 provider "google" {
   credentials = file(var.deployKeyName)
   project     = var.project
   region      = var.region
   zone        = var.zone
-}
-
-resource "google_compute_instance" "load-balancer-1" {
-  name           = "load-balancer-1"
-  machine_type   = var.machineType
-  zone           = var.zone
-  can_ip_forward = true
-
-  boot_disk {
-    initialize_params {
-      image = "ubuntu-os-cloud/ubuntu-2004-lts"
-    }
-  }
-
-  network_interface {
-    subnetwork = google_compute_subnetwork.default.name
-    network_ip = "192.168.7.12"
-    access_config {
-      nat_ip = "34.163.97.231"
-    }
-  }
-
 }
 
 resource "google_compute_network" "default" {
@@ -62,10 +41,10 @@ resource "google_compute_firewall" "internal" {
 
   allow {
     protocol = "tcp"
-    ports    = ["22", "6443", "2379-2380", "10250", "10259", "10257", "30000-32767","8083","8082"]
+    ports    = ["22", "6443", "2379-2380", "10250", "10259", "10257", "30000-32767"]
   }
 
-  source_ranges = ["0.0.0.0/0"]
+  source_ranges = ["192.168.7.0/24"]
 }
 
 resource "google_compute_firewall" "external" {
@@ -73,53 +52,54 @@ resource "google_compute_firewall" "external" {
   network = google_compute_network.default.name
 
   allow {
-    protocol = "icmp"
-  }
-
-  allow {
-    protocol = "udp"
-  }
-
-  allow {
     protocol = "tcp"
-    ports    = ["22", "6443", "443", "80", "30000-32767","8083","8082"]
+    ports    = ["22", "443", "80","8083","8082"]
   }
 
   source_ranges = ["0.0.0.0/0"]
 }
 
-resource "google_compute_address" "load_balancer_address_1" {
-  name   = "load-balancer"
+resource "google_compute_address" "gateway-public-ip" {
+  name   = "gateway-public-ip"
   region = var.region
 }
 
-resource "google_compute_instance" "master" {
+resource "google_compute_instance" "gateway-server" {
+  name           = "gateway-server"
+  machine_type   = var.machineType
+  zone           = var.zone
+  tags           = ["gateway"]
+  boot_disk {
+    initialize_params {
+      image = var.osImage
+    }
+  }
 
+  network_interface {
+    subnetwork = google_compute_subnetwork.default.name
+    network_ip = "192.168.7.30"
+    access_config {
+      nat_ip = google_compute_address.gateway-public-ip.address
+    }
+  }
+}
+
+resource "google_compute_instance" "master" {
   count          = var.mastersVMSCount
   name           = "master-${count.index}"
   machine_type   = var.machineType
   zone           = var.zone
-  can_ip_forward = true
-
-  tags = ["master"]
+  tags           = ["master"]
 
   boot_disk {
     initialize_params {
-      image = "ubuntu-os-cloud/ubuntu-2004-lts"
+      image = var.osImage
     }
   }
 
   network_interface {
     subnetwork = google_compute_subnetwork.default.name
     network_ip = "192.168.7.1${count.index}"
-
-    access_config {
-      # nat_ip = google_compute_address.master_address[count.index].address
-    }
-  }
-
-  service_account {
-    scopes = ["compute-rw", "storage-ro", "service-management", "service-control", "logging-write", "monitoring"]
   }
 }
 
@@ -129,33 +109,38 @@ resource "google_compute_instance" "worker" {
   name           = "worker-${count.index}"
   machine_type   = var.machineType
   zone           = var.zone
-  can_ip_forward = true
-
-  tags = ["worker"]
+  tags           = ["worker"]
 
   boot_disk {
     initialize_params {
-      image = "ubuntu-os-cloud/ubuntu-2004-lts"
+      image = var.osImage
     }
   }
 
   network_interface {
     subnetwork = google_compute_subnetwork.default.name
     network_ip = "192.168.7.2${count.index}"
-
-    access_config {
-      # nat_ip = google_compute_address.worker_address[count.index].address
-    }
   }
+}
 
-  service_account {
-    scopes = ["compute-rw", "storage-ro", "service-management", "service-control", "logging-write", "monitoring"]
+# Cloud Router for Cloud NAT
+resource "google_compute_router" "nat_router" {
+  name    = "nat-router"
+  network = google_compute_network.default.name
+  region  = var.region
+
+  bgp {
+    asn = 64514
   }
+}
 
-  metadata = {
-    pod-cidr = "10.200.${count.index}.0/24"
-  }
-
+# Cloud NAT Configuration
+resource "google_compute_router_nat" "nat_gateway" {
+  name                               = "nat-gateway"
+  router                             = google_compute_router.nat_router.name
+  region                             = var.region
+  nat_ip_allocate_option             = "AUTO_ONLY"
+  source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
 }
 
 resource "google_compute_project_metadata" "default" {

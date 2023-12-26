@@ -27,7 +27,7 @@
       shell: kubectl get pods -n argocd --field-selector=status.phase!=Running
       register: argocd_service_check
       until: argocd_service_check.stdout == ""
-      retries: 10
+      retries: 50
       delay: 10
 
     # Retrieve the initial admin password for Argo CD from its Kubernetes secret.
