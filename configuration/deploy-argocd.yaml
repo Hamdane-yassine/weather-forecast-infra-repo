@@ -98,7 +98,7 @@
 
     # Get the NodePort assigned to the application
     - name: Get the NodePort assigned to application
-      shell: kubectl get svc nginx-service -n sdtd-project -o jsonpath='{.spec.ports[?(@.port==80)].nodePort}'
+      shell: kubectl get svc frontend -n sdtd-project -o jsonpath='{.spec.ports[?(@.port==3000)].nodePort}'
       register: app_nodeport
     
     # Save Argo CD NodePort to a file
