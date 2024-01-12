@@ -36,19 +36,6 @@
       retries: 50
       delay: 10
 
-    # Retrieve the initial admin password for Argo CD from its Kubernetes secret.
-    - name: Get Argo CD initial admin password
-      shell: kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath="{.data.password}" | base64 --decode && echo
-      register: ARGOCD_PASSWORD
-      failed_when: ARGOCD_PASSWORD.rc != 0
-      
-    # Store the retrieved Argo CD password in a local file for later use.
-    - name: Store Argo CD password in local file
-      delegate_to: localhost
-      copy:
-        content: "{{ ARGOCD_PASSWORD.stdout }}"
-        dest: ./argocd-pwd
-
     # Check if the Argo CD initial admin secret exists before attempting deletion.
     - name: Check if Argo CD initial admin secret exists
       shell: kubectl get secret argocd-initial-admin-secret -n argocd
@@ -76,17 +63,36 @@
     # Apply the secret access configuration to Argo CD.
     - name: Apply Argo CD secret access
       shell: kubectl apply -f /tmp/argocd-secret-access.yaml
+ 
+    - name: Apply and check the application
+      shell: |
+        max_retries=5
+        for ((i=1; i<=$max_retries; i++)); do
+          kubectl apply -f /tmp/argocd-crd.yaml
 
-    # Apply the custom resource definitions needed for Argo CD to function.
-    - name: Apply Argo CD CRD
-      shell: kubectl apply -f /tmp/argocd-crd.yaml
-    
-    - name: Wait for app to be available
-      shell: kubectl get svc frontend -n sdtd-project
+          for ((j=1; j<=$max_retries; j++)); do
+            if kubectl get svc frontend -n sdtd-project; then
+              break
+            fi
+            sleep 5
+          done
+
+          if ((j > max_retries)); then
+            kubectl delete -f /tmp/argocd-crd.yaml
+            kubectl apply -f /tmp/argocd-crd.yaml
+          else
+            continue
+          fi
+        done
+
+        if ((i > max_retries)); then
+          echo "Failed to deploy the application after $max_retries retries."
+          exit 1
+        fi
+      args:
+        executable: /bin/bash
       register: app_check
-      until: app_check.rc == 0
-      retries: 30
-      delay: 10
+      failed_when: app_check.rc != 0
 
     # Get the NodePort assigned to the application
     - name: Get the NodePort assigned to application
