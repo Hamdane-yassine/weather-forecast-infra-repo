@@ -49,15 +49,15 @@ frontend kubernetes
         option tcplog
         default_backend master-nodes
 
-frontend Argo_front
-        bind 0.0.0.0:8083
-        mode http
-        default_backend argo_back
-
 frontend Grafana_front
-        bind 0.0.0.0:8082
+        bind 0.0.0.0:8080
         mode http
         default_backend grafana_back
+
+frontend Backend_front
+        bind 0.0.0.0:8081
+        mode http
+        default_backend backend_back
 
 frontend http_front
         bind 0.0.0.0:80
@@ -97,18 +97,6 @@ done <<< "$workers"
 
 cat <<EOF >> ../configuration/haproxy.cfg
 
-backend argo_back
-        mode http
-EOF
-
-while IFS= read -r worker; do
-    name=$(echo $worker | awk '{print $1}')
-    ip=$(echo $worker | awk '{print $2}')
-    echo "        server $name $ip:31000 check fall 3 rise 2" >> ../configuration/haproxy.cfg
-done <<< "$workers"
-
-cat <<EOF >> ../configuration/haproxy.cfg
-
 backend grafana_back
         mode http
 EOF
@@ -116,7 +104,19 @@ EOF
 while IFS= read -r worker; do
     name=$(echo $worker | awk '{print $1}')
     ip=$(echo $worker | awk '{print $2}')
-    echo "        server $name $ip:31100 check fall 3 rise 2" >> ../configuration/haproxy.cfg
+    echo "        server $name $ip:32000 check fall 3 rise 2" >> ../configuration/haproxy.cfg
+done <<< "$workers"
+
+cat <<EOF >> ../configuration/haproxy.cfg
+
+backend backend_back
+        mode http
+EOF
+
+while IFS= read -r worker; do
+    name=$(echo $worker | awk '{print $1}')
+    ip=$(echo $worker | awk '{print $2}')
+    echo "        server $name $ip:31000 check fall 3 rise 2" >> ../configuration/haproxy.cfg
 done <<< "$workers"
 
 cat <<EOF >> ../configuration/haproxy.cfg

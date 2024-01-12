@@ -54,7 +54,7 @@ resource "google_compute_firewall" "external" {
 
   allow {
     protocol = "tcp"
-    ports    = ["22", "443", "80", "8083", "8082"]
+    ports    = ["22", "443", "80", "8080", "8081"]
   }
 
   source_ranges = ["0.0.0.0/0"]
