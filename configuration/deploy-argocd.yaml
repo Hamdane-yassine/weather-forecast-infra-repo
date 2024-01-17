@@ -64,35 +64,16 @@
     - name: Apply Argo CD secret access
       shell: kubectl apply -f /tmp/argocd-secret-access.yaml
  
-    - name: Apply and check the application
-      shell: |
-        max_retries=5
-        for ((i=1; i<=$max_retries; i++)); do
-          kubectl apply -f /tmp/argocd-crd.yaml
-
-          for ((j=1; j<=$max_retries; j++)); do
-            if kubectl get svc frontend -n sdtd-project; then
-              break
-            fi
-            sleep 5
-          done
-
-          if ((j > max_retries)); then
-            kubectl delete -f /tmp/argocd-crd.yaml
-            kubectl apply -f /tmp/argocd-crd.yaml
-          else
-            continue
-          fi
-        done
-
-        if ((i > max_retries)); then
-          echo "Failed to deploy the application after $max_retries retries."
-          exit 1
-        fi
-      args:
-        executable: /bin/bash
-      register: app_check
-      failed_when: app_check.rc != 0
+    # Apply the custom resource definitions needed for Argo CD to function.
+    - name: Apply Argo CD CRD
+      shell: kubectl apply -f /tmp/argocd-crd.yaml
+    
+    - name: Wait for app service to be available
+      shell: kubectl get svc frontend -n sdtd-project
+      register: nginx_service_check
+      until: nginx_service_check.rc == 0
+      retries: 30
+      delay: 10
 
     # Get the NodePort assigned to the application
     - name: Get the NodePort assigned to application
@@ -118,4 +99,17 @@
       lineinfile:
         path: ./nodeports
         line: "{{ back_nodeport.stdout }}"
+        create: yes
+    
+    # Get the NodePort assigned to kafdrop
+    - name: Get the NodePort assigned to the application backend
+      shell: kubectl get svc kafdrop -n sdtd-project -o jsonpath='{.spec.ports[?(@.port==9000)].nodePort}'
+      register: kafdrop_nodeport
+    
+    # Save Argo CD NodePort to a file
+    - name: Save Kafdrop NodePort to a file
+      delegate_to: localhost
+      lineinfile:
+        path: ./nodeports
+        line: "{{ kafdrop_nodeport.stdout }}"
         create: yes

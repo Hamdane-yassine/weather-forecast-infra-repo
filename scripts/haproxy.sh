@@ -59,6 +59,11 @@ frontend Backend_front
         mode http
         default_backend backend_back
 
+frontend Kafdrop_front
+        bind 0.0.0.0:8082
+        mode http
+        default_backend kaf_back
+
 frontend http_front
         bind 0.0.0.0:80
         mode http
@@ -105,6 +110,18 @@ while IFS= read -r worker; do
     name=$(echo $worker | awk '{print $1}')
     ip=$(echo $worker | awk '{print $2}')
     echo "        server $name $ip:32000 check fall 3 rise 2" >> ../configuration/haproxy.cfg
+done <<< "$workers"
+
+cat <<EOF >> ../configuration/haproxy.cfg
+
+backend kaf_back
+        mode http
+EOF
+
+while IFS= read -r worker; do
+    name=$(echo $worker | awk '{print $1}')
+    ip=$(echo $worker | awk '{print $2}')
+    echo "        server $name $ip:33000 check fall 3 rise 2" >> ../configuration/haproxy.cfg
 done <<< "$workers"
 
 cat <<EOF >> ../configuration/haproxy.cfg

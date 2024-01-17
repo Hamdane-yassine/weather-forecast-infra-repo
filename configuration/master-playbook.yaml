@@ -142,4 +142,14 @@
         dest: "./"
         flat: yes
 
+    # Copy component.yaml from local machine to remote host
+    - name: Copy components.yaml to remote host
+      copy:
+        src: ./components.yaml
+        dest: /tmp/components.yaml
+
+    # Apply component.yaml using kubectl
+    - name: install metric server
+      shell: kubectl apply -f /tmp/components.yaml
+
          
