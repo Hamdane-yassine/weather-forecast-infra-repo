@@ -1,13 +1,16 @@
 #!/bin/sh
 
+# Parse output.json
+output=$(cat output.json)
+
 # Fetch worker instances
-worker_instances=$(gcloud compute instances list --filter="(tags.items:worker)" | grep -v NAME | awk '{ print $4 }')
+worker_instances=$(echo "$output" | jq -r '.worker_ips' | tr ',' '\n')
 
 # Fetch master instances
-master_instances=$(gcloud compute instances list --filter="(tags.items:master)" | grep -v NAME | awk '{ print $4 }')
+master_instances=$(echo "$output" | jq -r '.master_ips' | tr ',' '\n')
 
 # Fetch load balancer instance
-gateway_server_instance=$(gcloud compute instances list --filter="name:gateway-server" | grep -v NAME | awk '{ print $4 }')
+gateway_server_instance=$(echo "$output" | jq -r '.gateway_ip')
 
 # Determine the first master (assuming the first one in the list)
 first_master=$(echo "$master_instances" | head -n 1)

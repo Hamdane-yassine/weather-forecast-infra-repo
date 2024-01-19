@@ -1,12 +1,12 @@
 #!/bin/bash
 
-source env.sh
+source ./scripts/env.sh
 
-cd ../provisionning
+cd ./provisionning
 
 terraform destroy -auto-approve
 
-cd ../scripts
+cd ./scripts
 
 rm hosts
 
@@ -16,4 +16,4 @@ rm haproxy.cfg
 
 rm lb-ip
 
-cd ../scripts
+cd ../

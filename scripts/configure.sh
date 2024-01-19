@@ -1,5 +1,17 @@
 #!/bin/bash
 
+cd /tmp/scripts
+
+source env.sh
+
+source generate-ips.sh
+
+source create-hosts.sh
+
+source haproxy.sh
+
+source fetch-lb-ip.sh
+
 cd /tmp/configuration
 
 mkdir etcd 2> /dev/null
@@ -23,6 +35,3 @@ ansible-playbook helm-prometheus-grafana.yaml
 ansible-playbook update-lb-ports.yaml
 
 cd /tmp
-
-# rm -rd /tmp/configuration
-# rm -rd /tmp/scripts

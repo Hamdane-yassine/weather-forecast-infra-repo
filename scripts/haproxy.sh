@@ -1,10 +1,13 @@
 #!/bin/bash
 
-# Fetching master instances
-masters=$(gcloud compute instances list --filter="(tags.items:master)" --format="value(name,networkInterfaces[0].networkIP)")
+# Parse output.json
+output=$(cat output.json)
 
-# Fetching worker instances
-workers=$(gcloud compute instances list --filter="(tags.items:worker)" --format="value(name,networkInterfaces[0].networkIP)")
+# Fetch worker instances
+workers=$(echo "$output" | jq -r '.worker_ips' | tr ',' '\n')
+
+# Fetch master instances
+masters=$(echo "$output" | jq -r '.master_ips' | tr ',' '\n')
 
 # Start writing the HAProxy configuration
 cat <<EOF > ../configuration/haproxy.cfg
@@ -81,11 +84,9 @@ backend master-nodes
 EOF
 
 # Loop to fill master nodes
-while IFS= read -r master; do
-    name=$(echo $master | awk '{print $1}')
-    ip=$(echo $master | awk '{print $2}')
-    echo "        server $name $ip:6443 check fall 3 rise 2" >> ../configuration/haproxy.cfg
-done <<< "$masters"
+for master in $masters; do
+    echo "        server $master $master:6443 check fall 3 rise 2" >> ../configuration/haproxy.cfg
+done
 
 # Backend configurations for workers
 cat <<EOF >> ../configuration/haproxy.cfg
@@ -94,11 +95,9 @@ backend http_back
         mode http
 EOF
 
-while IFS= read -r worker; do
-    name=$(echo $worker | awk '{print $1}')
-    ip=$(echo $worker | awk '{print $2}')
-    echo "        server $name $ip:30000 check fall 3 rise 2" >> ../configuration/haproxy.cfg
-done <<< "$workers"
+for worker in $workers; do
+    echo "        server $worker $worker:30000 check fall 3 rise 2" >> ../configuration/haproxy.cfg
+done
 
 cat <<EOF >> ../configuration/haproxy.cfg
 
@@ -106,11 +105,9 @@ backend grafana_back
         mode http
 EOF
 
-while IFS= read -r worker; do
-    name=$(echo $worker | awk '{print $1}')
-    ip=$(echo $worker | awk '{print $2}')
-    echo "        server $name $ip:32000 check fall 3 rise 2" >> ../configuration/haproxy.cfg
-done <<< "$workers"
+for worker in $workers; do
+    echo "        server $worker $worker:32000 check fall 3 rise 2" >> ../configuration/haproxy.cfg
+done
 
 cat <<EOF >> ../configuration/haproxy.cfg
 
@@ -118,11 +115,9 @@ backend kaf_back
         mode http
 EOF
 
-while IFS= read -r worker; do
-    name=$(echo $worker | awk '{print $1}')
-    ip=$(echo $worker | awk '{print $2}')
-    echo "        server $name $ip:33000 check fall 3 rise 2" >> ../configuration/haproxy.cfg
-done <<< "$workers"
+for worker in $workers; do
+    echo "        server $worker $worker:33000 check fall 3 rise 2" >> ../configuration/haproxy.cfg
+done
 
 cat <<EOF >> ../configuration/haproxy.cfg
 
@@ -130,11 +125,9 @@ backend backend_back
         mode http
 EOF
 
-while IFS= read -r worker; do
-    name=$(echo $worker | awk '{print $1}')
-    ip=$(echo $worker | awk '{print $2}')
-    echo "        server $name $ip:31000 check fall 3 rise 2" >> ../configuration/haproxy.cfg
-done <<< "$workers"
+for worker in $workers; do
+    echo "        server $worker $worker:31000 check fall 3 rise 2" >> ../configuration/haproxy.cfg
+done
 
 cat <<EOF >> ../configuration/haproxy.cfg
 
@@ -142,10 +135,8 @@ backend https_back
         mode http
 EOF
 
-while IFS= read -r worker; do
-    name=$(echo $worker | awk '{print $1}')
-    ip=$(echo $worker | awk '{print $2}')
-    echo "        server $name $ip:30000 check fall 3 rise 2" >> ../configuration/haproxy.cfg
-done <<< "$workers"
+for worker in $workers; do
+    echo "        server $worker $worker:30000 check fall 3 rise 2" >> ../configuration/haproxy.cfg
+done
 
 echo "HAProxy configuration generated in haproxy.cfg"
