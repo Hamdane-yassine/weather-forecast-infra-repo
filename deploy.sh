@@ -1,11 +1,13 @@
-# Script to create the infra in gcp
 #!/bin/bash
+# This script creates the infrastructure in GCP
 
+# Source environment variables
 source ./scripts/env.sh
 
 # Remove the existing key file if it exists
 if [ -f "$TF_VAR_gcpPrivateKeyFile" ]; then
-    rm ~/.ssh -r
+    # Remove the .ssh directory and its contents
+    rm -r ~/.ssh
 fi
 
 # Generate the RSA key pair

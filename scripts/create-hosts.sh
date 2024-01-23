@@ -1,4 +1,5 @@
 #!/bin/sh
+# This script creates the hosts file for Ansible
 
 # Parse output.json
 output=$(cat output.json)
@@ -18,6 +19,7 @@ first_master=$(echo "$master_instances" | head -n 1)
 # Determine other masters (excluding the first one)
 other_masters=$(echo "$master_instances" | grep -v "$first_master")
 
+# Create the hosts file for Ansible
 cat > hosts <<EOF
 [gateway]
 $gateway_server_instance

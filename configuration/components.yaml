@@ -1,3 +1,4 @@
+# This configuration file is used to deploy the metrics-server in a Kubernetes cluster.
 apiVersion: v1
 kind: ServiceAccount
 metadata:

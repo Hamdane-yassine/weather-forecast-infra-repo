@@ -1,3 +1,4 @@
+# Declaration of variables for user and file configuration
 variable "gcpUserID" {}
 variable "gcpPublicKeyFile" {}
 variable "gcpPrivateKeyFile" {}
@@ -10,6 +11,7 @@ variable "mastersVMSCount" {}
 variable "machineType" {}
 variable "osImage" {}
 
+# Google Cloud provider configuration with project, region, and zone details
 provider "google" {
   credentials = file(var.deployKeyName)
   project     = var.project
@@ -17,17 +19,20 @@ provider "google" {
   zone        = var.zone
 }
 
+# Creation of a Google Compute Network without auto-creating subnetworks
 resource "google_compute_network" "default" {
   name                    = "sdtd-network"
   auto_create_subnetworks = "false"
 }
 
+# Creation of a subnetwork within the defined network with a specific IP range
 resource "google_compute_subnetwork" "default" {
   name          = "sdtd-sub-network"
   network       = google_compute_network.default.name
   ip_cidr_range = "192.168.7.0/24"
 }
 
+# Internal firewall rules allowing specific protocols and ports within the network
 resource "google_compute_firewall" "internal" {
   name    = "allow-internal"
   network = google_compute_network.default.name
@@ -48,23 +53,26 @@ resource "google_compute_firewall" "internal" {
   source_ranges = ["192.168.7.0/24"]
 }
 
+# External firewall rules allowing access from any source to specific ports
 resource "google_compute_firewall" "external" {
   name    = "allow-external"
   network = google_compute_network.default.name
 
   allow {
     protocol = "tcp"
-    ports    = ["22", "443", "80", "8080", "8081","8082"]
+    ports    = ["22", "443", "80", "8080", "8081", "8082"]
   }
 
   source_ranges = ["0.0.0.0/0"]
 }
 
+# Reserve a static external IP address in the specified region
 resource "google_compute_address" "gateway-public-ip" {
   name   = "gateway-public-ip"
   region = var.region
 }
 
+# Gateway server instance configuration including network and provisioning details
 resource "google_compute_instance" "gateway-server" {
   name         = "gateway-server"
   machine_type = var.machineType
@@ -85,10 +93,7 @@ resource "google_compute_instance" "gateway-server" {
     }
   }
 
-  provisioner "local-exec" {
-    command = "cd ../scripts && ./create-hosts.sh && ./fetch-lb-ip.sh && ./haproxy.sh"
-  }
-
+  # Remote script execution for server configuration
   provisioner "remote-exec" {
     inline = [
       "mkdir -p /tmp/configuration/",
@@ -108,6 +113,7 @@ resource "google_compute_instance" "gateway-server" {
     }
   }
 
+  # File provisioning for private key and script files
   provisioner "file" {
     source      = var.gcpPrivateKeyFile
     destination = "/tmp/google_compute_engine"
@@ -144,6 +150,7 @@ resource "google_compute_instance" "gateway-server" {
     }
   }
 
+  # Final remote execution for server setup and configuration
   provisioner "remote-exec" {
     inline = [
       "chmod +x /tmp/scripts/configure.sh",
@@ -159,6 +166,7 @@ resource "google_compute_instance" "gateway-server" {
   }
 }
 
+# Creation of master compute instances with dynamic naming and network settings
 resource "google_compute_instance" "master" {
   count        = var.mastersVMSCount
   name         = "master-${count.index}"
@@ -178,8 +186,8 @@ resource "google_compute_instance" "master" {
   }
 }
 
+# Creation of worker compute instances with dynamic naming and network settings
 resource "google_compute_instance" "worker" {
-
   count        = var.workersVMSCount
   name         = "worker-${count.index}"
   machine_type = var.machineType
@@ -198,7 +206,7 @@ resource "google_compute_instance" "worker" {
   }
 }
 
-# Cloud Router for Cloud NAT
+# Configuration of Cloud Router for NAT
 resource "google_compute_router" "nat_router" {
   name    = "nat-router"
   network = google_compute_network.default.name
@@ -209,7 +217,7 @@ resource "google_compute_router" "nat_router" {
   }
 }
 
-# Cloud NAT Configuration
+# Configuration of Cloud NAT Gateway for internet access
 resource "google_compute_router_nat" "nat_gateway" {
   name                               = "nat-gateway"
   router                             = google_compute_router.nat_router.name
@@ -218,6 +226,7 @@ resource "google_compute_router_nat" "nat_gateway" {
   source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
 }
 
+# Setting project-wide SSH keys metadata for instances
 resource "google_compute_project_metadata" "default" {
   metadata = {
     ssh-keys = "${var.gcpUserID}:${file(var.gcpPublicKeyFile)}"

@@ -1,18 +1,19 @@
+# This is an Argo CD Application CRD (Custom Resource Definition)
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: nginx-app
-  namespace: argocd
+  name: nginx-app # The name of the application
+  namespace: argocd # The namespace where Argo CD application is deployed
 spec:
-  project: default
+  project: default # The Argo CD project where the application belongs
   source:
-    repoURL: https://gitlab.com/Gh-Badr/weather-forecast.git
-    targetRevision: HEAD
-    path: k8s-manifests
+    repoURL: https://gitlab.com/Gh-Badr/weather-forecast.git # The Git repository URL where the application's source code resides
+    targetRevision: HEAD # The revision of the Git repository to sync with
+    path: k8s-manifests # The directory in the Git repository that contains the Kubernetes manifests
   destination:
-    namespace: sdtd-project
-    server: https://kubernetes.default.svc
+    namespace: sdtd-project # The namespace in the Kubernetes cluster where the application will be deployed
+    server: https://kubernetes.default.svc # The address of the Kubernetes API server where the application will be deployed
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
+    automated: # The sync policy for the application
+      prune: true # If true, resources not tracked by the Git repository will be pruned (deleted)
+      selfHeal: true # If true, Argo CD will automatically apply the desired state from the Git repository if it detects drift
