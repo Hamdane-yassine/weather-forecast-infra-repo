@@ -8,12 +8,6 @@ export TF_VAR_bucketName="terraform-state-bucket"
 # Set the User ID for SSH connections to instances on Google Cloud Platform
 export TF_VAR_gcpUserID="root"
 
-# Specify the path to the private key file for SSH connections to instances
-export TF_VAR_gcpPrivateKeyFile="$HOME/.ssh/google_compute_engine"
-
-# Specify the path to the public key file for SSH connections to instances
-export TF_VAR_gcpPublicKeyFile="$HOME/.ssh/google_compute_engine.pub"
-
 # Define the ID of your Google Cloud Platform project
 export TF_VAR_project="stdt-project"
 

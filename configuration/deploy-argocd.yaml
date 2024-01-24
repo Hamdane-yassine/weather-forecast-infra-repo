@@ -33,7 +33,7 @@
       shell: kubectl get pods -n argocd --field-selector=status.phase!=Running
       register: argocd_service_check
       until: argocd_service_check.stdout == ""
-      retries: 50
+      retries: 10
       delay: 10
 
     # Check if the Argo CD initial admin secret exists before attempting deletion.
@@ -68,12 +68,19 @@
     - name: Apply Argo CD CRD
       shell: kubectl apply -f /tmp/argocd-crd.yaml
     
-    - name: Wait for app service to be available
-      shell: kubectl get svc frontend -n sdtd-project
-      register: nginx_service_check
-      until: nginx_service_check.rc == 0
-      retries: 30
-      delay: 10
+    - name: Try to get app service
+      block:
+        - name: Wait for app service to be available
+          shell: kubectl get svc frontend -n sdtd-project
+          register: nginx_service_check
+          until: nginx_service_check.rc == 0
+          retries: 5
+          delay: 10
+      rescue:
+        - name: Delete and reapply argocd-crd.yaml
+          shell: |
+            kubectl delete -f /tmp/argocd-crd.yaml
+            kubectl apply -f /tmp/argocd-crd.yaml
 
     # Get the NodePort assigned to the application
     - name: Get the NodePort assigned to application

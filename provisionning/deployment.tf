@@ -1,7 +1,5 @@
 # Declaration of variables for user and file configuration
 variable "gcpUserID" {}
-variable "gcpPublicKeyFile" {}
-variable "gcpPrivateKeyFile" {}
 variable "project" {}
 variable "region" {}
 variable "zone" {}
@@ -10,6 +8,19 @@ variable "workersVMSCount" {}
 variable "mastersVMSCount" {}
 variable "machineType" {}
 variable "osImage" {}
+
+# Generate a new SSH key
+resource "tls_private_key" "ssh" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+# Write the private key to a local file
+resource "local_sensitive_file" "private_key" {
+  content        = tls_private_key.ssh.private_key_pem
+  filename       = "${path.module}/id_rsa"
+  file_permission = "0600"
+}
 
 # Google Cloud provider configuration with project, region, and zone details
 provider "google" {
@@ -108,20 +119,20 @@ resource "google_compute_instance" "gateway-server" {
     connection {
       type        = "ssh"
       user        = var.gcpUserID
-      private_key = file(var.gcpPrivateKeyFile)
+      private_key = local_sensitive_file.private_key.content
       host        = self.network_interface[0].access_config[0].nat_ip
     }
   }
 
   # File provisioning for private key and script files
   provisioner "file" {
-    source      = var.gcpPrivateKeyFile
+    source      = local_sensitive_file.private_key.filename
     destination = "/tmp/google_compute_engine"
 
     connection {
       type        = "ssh"
       user        = var.gcpUserID
-      private_key = file(var.gcpPrivateKeyFile)
+      private_key = local_sensitive_file.private_key.content
       host        = self.network_interface[0].access_config[0].nat_ip
     }
   }
@@ -133,7 +144,7 @@ resource "google_compute_instance" "gateway-server" {
     connection {
       type        = "ssh"
       user        = var.gcpUserID
-      private_key = file(var.gcpPrivateKeyFile)
+      private_key = local_sensitive_file.private_key.content
       host        = self.network_interface[0].access_config[0].nat_ip
     }
   }
@@ -145,7 +156,7 @@ resource "google_compute_instance" "gateway-server" {
     connection {
       type        = "ssh"
       user        = var.gcpUserID
-      private_key = file(var.gcpPrivateKeyFile)
+      private_key = local_sensitive_file.private_key.content
       host        = self.network_interface[0].access_config[0].nat_ip
     }
   }
@@ -153,6 +164,7 @@ resource "google_compute_instance" "gateway-server" {
   # Final remote execution for server setup and configuration
   provisioner "remote-exec" {
     inline = [
+      "chmod 600 /tmp/google_compute_engine",
       "chmod +x /tmp/scripts/configure.sh",
       "/tmp/scripts/configure.sh"
     ]
@@ -160,7 +172,7 @@ resource "google_compute_instance" "gateway-server" {
     connection {
       type        = "ssh"
       user        = var.gcpUserID
-      private_key = file(var.gcpPrivateKeyFile)
+      private_key = local_sensitive_file.private_key.content
       host        = self.network_interface[0].access_config[0].nat_ip
     }
   }
@@ -226,9 +238,9 @@ resource "google_compute_router_nat" "nat_gateway" {
   source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
 }
 
-# Setting project-wide SSH keys metadata for instances
+# Add the generated public key to the project metadata
 resource "google_compute_project_metadata" "default" {
   metadata = {
-    ssh-keys = "${var.gcpUserID}:${file(var.gcpPublicKeyFile)}"
+    ssh-keys = "${var.gcpUserID}:${tls_private_key.ssh.public_key_openssh}"
   }
 }
